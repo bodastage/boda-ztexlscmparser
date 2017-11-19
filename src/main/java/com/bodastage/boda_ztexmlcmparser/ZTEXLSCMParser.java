@@ -101,6 +101,15 @@ public class ZTEXLSCMParser {
      */
     private Map<String, Stack> moColumns = new LinkedHashMap<String, Stack>();
     
+    
+    /**
+     * Tracks Managed Object key attributes. _id is appended to the parimary key 
+     * parameters in the headers of the csv
+     *
+     * @since 1.0.0
+     */
+    private Map<String, Stack> moKeyColumns = new LinkedHashMap<String, Stack>();
+            
     /**
      * This holds a map of the Managed Object Instances (MOIs) to the respective
      * csv print writers.
@@ -288,12 +297,14 @@ public class ZTEXLSCMParser {
             Sheet moSheet = wb.getSheet(moName);
 
             Stack<String> parameters = new Stack();
+            Stack<String> keyParameters = new Stack();
             
             String pNameStr = "FileName";
             String pValueStr   = baseFileName;
 
             if( moColumns.containsKey(moName)){
                 parameters = moColumns.get(moName);
+                keyParameters = moKeyColumns.get(moName);
             }
             
             if( parserState == ParserStates.EXTRACTING_VALUES && !moiPrintWriters.containsKey(moName)){
@@ -302,29 +313,42 @@ public class ZTEXLSCMParser {
                 moiPrintWriters.put(moName, new PrintWriter(moiFile));
                 
                 Stack moParameterList = moColumns.get(moName);
+                Stack moKeyParameterList = moKeyColumns.get(moName);
+
                 for(int i =0; i < moParameterList.size(); i++ ){
-                    pNameStr += "," + moParameterList.get(i).toString();
+                    String p = moParameterList.get(i).toString();
+
+                    //Append _id to Primary key parameters
+                    if( moKeyParameterList.contains(p)) { 
+                        if(!p.equals("MEID")) p = p + "_id";
+                    }
+                    pNameStr += "," + p;
                 }
                 moiPrintWriters.get(moName).println(pNameStr);
 
             }
             
             //Parameters in the sheet
-            Stack<String> sheetParams = new Stack();             
+            Stack<String> sheetParams = new Stack();  
+            Stack<String> sheetKeyParams = new Stack();           
             
             int sheetRowCount = 0;
             for (Row sheetRow : moSheet) {
                 ++sheetRowCount;
                 
                 //Do nothing if we are on rows
-                if(sheetRowCount >= 2 && sheetRowCount <= 5 ){
+                if(sheetRowCount >= 2 && sheetRowCount <= 4 ){
+                    continue;
+                }
+                
+                if(sheetRowCount == 5 && parserState != ParserStates.EXTRACTING_PARAMETERS){
                     continue;
                 }
                 
                 //Get values from each row
                 Stack<String> sheetParamValues = new Stack(); 
                 
-                int rCount = 0;
+                int rCount = 0; //cell horizontal count per row
                 for(Cell sheetRowCell: sheetRow){
                     ++rCount;
                     
@@ -335,6 +359,19 @@ public class ZTEXLSCMParser {
                         if(!parameters.contains(cellValue)){ 
                             parameters.add(cellValue);
                         }
+                        continue;
+                    }
+                    
+                    //Get key parameters
+                    if( sheetRowCount == 5 && parserState == ParserStates.EXTRACTING_PARAMETERS ){
+                        if(cellValue.equals("Primary Key")){
+                            //sheetKeyParams.add( sheetParams.get(rCount-1));
+                            String kParam = parameters.get(rCount-1);
+                            if(!keyParameters.contains(kParam)){
+                                keyParameters.add(kParam);
+                            }
+                        }
+                        
                         continue;
                     }
             
@@ -389,10 +426,12 @@ public class ZTEXLSCMParser {
 
             if( parserState == ParserStates.EXTRACTING_PARAMETERS){
                 moColumns.put(moName, parameters);
+                moKeyColumns.put(moName, keyParameters);
                 //parameters.clear();
+                //keyParameters.clear();
                 continue;
             }
-            
+
         }
     }
     
