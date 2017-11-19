@@ -5,15 +5,20 @@
  */
 package com.bodastage.boda_ztexmlcmparser;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -31,6 +36,14 @@ import org.apache.poi.ss.usermodel.WorkbookFactory;
  * @author Emmanuel
  */
 public class ZTEXLSCMParser {
+
+    public ZTEXLSCMParser() {
+        DateFormat dateFormat  = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        Date date = new Date();
+        dateTime = dateFormat.format(date);
+    }
+    
+    
     
     /**
      * The base file name of the file being parsed.
@@ -101,6 +114,13 @@ public class ZTEXLSCMParser {
      */
     private Map<String, Stack> moColumns = new LinkedHashMap<String, Stack>();
     
+    /**
+     * Parser start time.
+     *
+     * @since 1.1.0
+     * @version 1.1.0
+     */
+    final long startTime = System.currentTimeMillis();
     
     /**
      * Tracks Managed Object key attributes. _id is appended to the parimary key 
@@ -110,6 +130,11 @@ public class ZTEXLSCMParser {
      */
     private Map<String, Stack> moKeyColumns = new LinkedHashMap<String, Stack>();
             
+    private String neType = "";
+    private String templateType = "";
+    private String templateVersion = "";
+    private String dataType = "";
+    
     /**
      * This holds a map of the Managed Object Instances (MOIs) to the respective
      * csv print writers.
@@ -122,19 +147,109 @@ public class ZTEXLSCMParser {
     public static void main( String[] args ) {
         
         try{
+            //show help
+            if( (args.length != 2 && args.length != 3) || (args.length == 1 && args[0] == "-h")){
+                showHelp();
+                System.exit(1);
+            }
+            
             String filename = args[0];
             String outputDirectory = args[1];
+            
+            //Confirm that the output directory is a directory and has write 
+            //privileges
+            File fOutputDir = new File(outputDirectory);
+            if(!fOutputDir.isDirectory()) {
+                System.err.println("ERROR: The specified output directory is not a directory!.");
+                System.exit(1);
+            }
+            
+            if(!fOutputDir.canWrite()){
+                System.err.println("ERROR: Cannot write to output directory!");
+                System.exit(1);            
+            }
 
             ZTEXLSCMParser parser = new ZTEXLSCMParser();
+            
+            if(  args.length == 3  ){
+                File f = new File(args[2]);
+                if(f.isFile()){
+                   parser.setParameterFile(args[2]);
+                   parser.getParametersToExtract(args[2]);
+                }
+            }
+            
             parser.setDataSource(args[0]);
             parser.setFileName(args[0]);
             parser.setOuputDirectory(args[1]);
             parser.parse();
+            parser.printExecutionTime();
         }catch(Exception e){
             System.out.println(e.getMessage());
         }
     }
     
+    /**
+     * Show parser help.
+     * 
+     * @since 1.0.0
+     * @version 1.0.0
+     */
+    static public void showHelp(){
+        System.out.println("boda-ztexlscmparser 1.0.0 Copyright (c) 2017 Bodastage(http://www.bodastage.com)");
+        System.out.println("Parses ZTE CM Dumps from Netnumen in excel to csv.");
+        System.out.println("Usage: java -jar boda-ztexlscmparser.jar <fileToParse.xls> <outputDirectory> [parameterFile]");
+    }
+    
+    /**
+     * File containing a list of parameters to export
+     * 
+     * @since 1.2.0
+     */
+    private String parameterFile = null;
+
+    /**
+     * Set the parameter file name 
+     * 
+     * @param filename 
+     */
+    public void setParameterFile(String filename){
+        parameterFile = filename;
+    }
+    
+  /**
+     * Extract parameter list from  parameter file
+     * 
+     * @param filename 
+     */
+    public  void getParametersToExtract(String filename) throws FileNotFoundException, IOException{
+        BufferedReader br = new BufferedReader(new FileReader(filename));
+        for(String line; (line = br.readLine()) != null; ) {
+           String [] moAndParameters =  line.split(":");
+           String mo = moAndParameters[0];
+           String [] parameters = moAndParameters[1].split(",");
+           
+           Stack parameterStack = new Stack();
+           Stack keyParameterStack = new Stack();
+           for(int i =0; i < parameters.length; i++){
+               if( parameters[i].endsWith("_id")){
+                   String p = parameters[i].replace("_id", "");
+                   parameterStack.push(p);
+                   keyParameterStack.push(p);
+               }else{
+                   parameterStack.push(parameters[i]);
+               }
+               
+           }
+           
+           moColumns.put(mo, parameterStack);
+           moKeyColumns.put(mo, keyParameterStack);
+
+        }
+        
+        //Move to the parameter value extraction stage
+        parserState = ParserStates.EXTRACTING_VALUES;
+    }
     
     
     /**
@@ -176,6 +291,51 @@ public class ZTEXLSCMParser {
         }
         
         closeMOPWMap();
+        
+        printExecutionTime();
+    }
+    
+    /**
+     * Print program's execution time.
+     * 
+     * @since 1.0.0
+     */
+    public void printExecutionTime(){
+        float runningTime = System.currentTimeMillis() - startTime;
+        
+        String s = "Parsing completed. ";
+        s = s + "Total time:";
+        
+        //Get hours
+        if( runningTime > 1000*60*60 ){
+            int hrs = (int) Math.floor(runningTime/(1000*60*60));
+            s = s + hrs + " hours ";
+            runningTime = runningTime - (hrs*1000*60*60);
+        }
+        
+        //Get minutes
+        if(runningTime > 1000*60){
+            int mins = (int) Math.floor(runningTime/(1000*60));
+            s = s + mins + " minutes ";
+            runningTime = runningTime - (mins*1000*60);
+        }
+        
+        //Get seconds
+        if(runningTime > 1000){
+            int secs = (int) Math.floor(runningTime/(1000));
+            s = s + secs + " seconds ";
+            runningTime = runningTime - (secs/1000);
+        }
+        
+        //Get milliseconds
+        if(runningTime > 0 ){
+            int msecs = (int) Math.floor(runningTime/(1000));
+            s = s + msecs + " milliseconds ";
+            runningTime = runningTime - (msecs/1000);
+        }
+
+        
+        System.out.println(s);
     }
     
     /**
@@ -282,6 +442,30 @@ public class ZTEXLSCMParser {
     
     public void parseFile(String fileName ) throws FileNotFoundException, IOException, InvalidFormatException{
         Workbook wb = WorkbookFactory.create(new File(fileName));
+        
+        //CGet
+        Sheet templateInfoSheet = wb.getSheetAt(0);
+        for (Row row : templateInfoSheet) {
+            String key = row.getCell(0).getStringCellValue();
+            String value = row.getCell(1).getStringCellValue();
+            
+            if(key.equals("NE Type:")){
+                neType = value;
+            }
+            
+            if(key.equals("Template Type:")){
+                templateType = value;
+            }
+            
+            if(key.equals("Template Version:")){
+                templateVersion = value;
+            }
+            
+            if(key.equals("Data Type:")){
+                dataType = value;
+            }
+        }
+        
         Sheet sheet = wb.getSheetAt(1);
          
         int rowCount = 0;
@@ -293,14 +477,15 @@ public class ZTEXLSCMParser {
             
             Cell cell = row.getCell(1);
             String moName = cell.getStringCellValue();
+            
+            //Skip MOs not in parameter file
+            if(parameterFile != null && !moColumns.containsKey(moName)) continue;
+            
 
             Sheet moSheet = wb.getSheet(moName);
 
             Stack<String> parameters = new Stack();
             Stack<String> keyParameters = new Stack();
-            
-            String pNameStr = "FileName";
-            String pValueStr   = baseFileName;
 
             if( moColumns.containsKey(moName)){
                 parameters = moColumns.get(moName);
@@ -315,8 +500,24 @@ public class ZTEXLSCMParser {
                 Stack moParameterList = moColumns.get(moName);
                 Stack moKeyParameterList = moKeyColumns.get(moName);
 
+                String pNameStr = "FileName,varDateTime,NeType,TemplateType,TemplateVersion,DataType";
+                String pValueStr   = baseFileName + ","+ dateTime + "," + neType + 
+                        "," + templateType + "," + templateVersion + 
+                        "," + dataType ;
+                
                 for(int i =0; i < moParameterList.size(); i++ ){
                     String p = moParameterList.get(i).toString();
+
+                    //Skip filename and vardatetime
+                    if(parameterFile != null && 
+                        ( p.toLowerCase().equals("filename") || 
+                            p.toLowerCase().equals("vardatetime") || 
+                            p.toLowerCase().equals("netype") || 
+                            p.toLowerCase().equals("templatetype") || 
+                            p.toLowerCase().equals("templateversion") || 
+                            p.toLowerCase().equals("datatype") ) ){
+                        continue;
+                    }
 
                     //Append _id to Primary key parameters
                     if( moKeyParameterList.contains(p)) { 
@@ -327,6 +528,7 @@ public class ZTEXLSCMParser {
                 moiPrintWriters.get(moName).println(pNameStr);
 
             }
+            
             
             //Parameters in the sheet
             Stack<String> sheetParams = new Stack();  
@@ -361,6 +563,7 @@ public class ZTEXLSCMParser {
                         }
                         continue;
                     }
+
                     
                     //Get key parameters
                     if( sheetRowCount == 5 && parserState == ParserStates.EXTRACTING_PARAMETERS ){
@@ -399,24 +602,36 @@ public class ZTEXLSCMParser {
                 
                 //Write values
                 if(sheetRowCount>5 && parserState == ParserStates.EXTRACTING_VALUES){
-                
-                    pNameStr = "FileName";
-                    pValueStr   = baseFileName;
-                    
-                    Stack pList = moColumns.get(moName);
-                    for(int i =0; i < pList.size(); i++){
-                        String p = pList.get(i).toString();
 
-                        int pIndex = sheetParams.indexOf(p);
+                    String pNameStr = "FileName,varDateTime,NeType,TemplateType,TemplateVersion,DataType";
+                    String pValueStr   = baseFileName + ","+ dateTime + "," + neType + 
+                        "," + templateType + "," + templateVersion + 
+                        "," + dataType ;
+                    Stack pList = moColumns.get(moName);
+
+                    for(int i =0; i < pList.size(); i++){
+                            
+                        String p = pList.get(i).toString();
                         
-                        //System.out.println("pIndex:" + pIndex);
+                        //Skip filename and vardatetime
+                        if(parameterFile != null && 
+                            ( p.toLowerCase().equals("filename") || 
+                                p.toLowerCase().equals("vardatetime") || 
+                                p.toLowerCase().equals("netype") || 
+                                p.toLowerCase().equals("templatetype") || 
+                                p.toLowerCase().equals("templateversion") || 
+                                p.toLowerCase().equals("datatype") ) ){
+                            continue;
+                        }
+                        
+                        int pIndex = sheetParams.indexOf(p);
+
                         
                         String value = sheetParamValues.get(pIndex);
-                        //System.out.println("value:" + value);
                         
                         pValueStr += "," + toCSVFormat(value);
                     }
-
+                    
                     moiPrintWriters.get(moName).println(pValueStr);
                     sheetParamValues.clear();
                     continue;
