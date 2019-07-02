@@ -6,7 +6,7 @@ Parses ZTE CM Plan template Excel workbooks to csv
 # Usage
 ```
 usage: java -jar boda-ztexlscmparser.jar
-Parses ZTE templace excel document to csv
+Parses ZTE template excel document to csv
 
  -c,--parameter-config <PARAMETER_CONFIG>   parameter configuration file
  -h,--help                                  show help
