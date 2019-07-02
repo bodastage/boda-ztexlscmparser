@@ -31,12 +31,29 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.ParseException;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 /**
  *
  * @author Emmanuel
  */
 public class ZTEXLSCMParser {
-
+    /**
+     * Current release version 
+     * 
+     * Since 1.3.0
+     */
+    final static String VERSION = "1.2.0";
+    
+    private static final Logger LOGGER = LoggerFactory.getLogger(ZTEXLSCMParser.class);
+    
     public ZTEXLSCMParser() {
         DateFormat dateFormat  = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         Date date = new Date();
@@ -97,6 +114,9 @@ public class ZTEXLSCMParser {
     private Map<String,String> moiParameterValueMap 
             = new LinkedHashMap<String, String>();
     
+    public void setOutputDirectory(String directoryName) {
+        this.outputDirectory = directoryName;
+    }
     
     /**
      * Parser states. Currently there are only 2: extraction and parsing
@@ -146,46 +166,140 @@ public class ZTEXLSCMParser {
     
     public static void main( String[] args ) {
         
-        try{
-            //show help
-            if( (args.length != 2 && args.length != 3) || (args.length == 1 && args[0] == "-h")){
-                showHelp();
-                System.exit(1);
-            }
+        
+
+       //Define
+       Options options = new Options();
+       CommandLine cmd = null;
+       String outputDirectory = null;   
+       String inputFile = null;
+       String parameterConfigFile = null;
+       Boolean onlyExtractParameters = false;
+       Boolean showHelpMessage = false;
+       Boolean showVersion = false;
+       Boolean attachMetaFields = false; //Attach mattachMetaFields FILENAME,DATETIME,NE_TECHNOLOGY,NE_VENDOR,NE_VERSION,NE_TYPE
+       
+       try{ 
+            //options.addOption( "p", "extract-parameters", false, "extract only the managed objects and parameters" );
+            options.addOption( "v", "version", false, "display version" );
+            //options.addOption( "m", "meta-fields", false, "add meta fields to extracted parameters. FILENAME,DATETIME" );
+            options.addOption( Option.builder("i")
+                    .longOpt( "input-file" )
+                    .desc( "input file or directory name")
+                    .hasArg()
+                    .argName( "INPUT_FILE" ).build());
+            options.addOption(Option.builder("o")
+                    .longOpt( "output-directory" )
+                    .desc( "output directory name")
+                    .hasArg()
+                    .argName( "OUTPUT_DIRECTORY" ).build());
+            options.addOption(Option.builder("c")
+                    .longOpt( "parameter-config" )
+                    .desc( "parameter configuration file")
+                    .hasArg()
+                    .argName( "PARAMETER_CONFIG" ).build() );
+            options.addOption( "h", "help", false, "show help" );
             
-            String filename = args[0];
-            String outputDirectory = args[1];
-            
-            //Confirm that the output directory is a directory and has write 
-            //privileges
-            File fOutputDir = new File(outputDirectory);
-            if(!fOutputDir.isDirectory()) {
-                System.err.println("ERROR: The specified output directory is not a directory!.");
-                System.exit(1);
-            }
-            
-            if(!fOutputDir.canWrite()){
-                System.err.println("ERROR: Cannot write to output directory!");
-                System.exit(1);            
+            //Parse command line arguments
+            CommandLineParser parser = new DefaultParser();
+            cmd = parser.parse( options, args);
+
+            if( cmd.hasOption("h")){
+                showHelpMessage = true;
             }
 
-            ZTEXLSCMParser parser = new ZTEXLSCMParser();
+            if( cmd.hasOption("v")){
+                showVersion = true;
+            }
             
-            if(  args.length == 3  ){
-                File f = new File(args[2]);
-                if(f.isFile()){
-                   parser.setParameterFile(args[2]);
-                   parser.getParametersToExtract(args[2]);
+            if(cmd.hasOption('o')){
+                outputDirectory = cmd.getOptionValue("o"); 
+            }
+            
+            if(cmd.hasOption('i')){
+                inputFile = cmd.getOptionValue("i"); 
+            }
+            
+            if(cmd.hasOption('c')){
+                parameterConfigFile = cmd.getOptionValue("c"); 
+            }
+            
+            if(cmd.hasOption('p')){
+                onlyExtractParameters  = true;
+            }
+            
+            if(cmd.hasOption('m')){
+                attachMetaFields  = true;
+            }
+            
+       }catch(IllegalArgumentException e){
+           
+       } catch (ParseException ex) {
+//            java.util.logging.Logger.getLogger(HuaweiCMObjectParser.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+        
+       
+
+        try{
+            
+            if(showVersion == true ){
+                System.out.println(VERSION);
+                System.out.println("Copyright (c) 2019 Bodastage Solutions(http://www.bodastage.com)");
+                System.exit(0);
+            }
+            
+            //show help
+            if( showHelpMessage == true || 
+                inputFile == null || 
+                ( outputDirectory == null && onlyExtractParameters == false) ){
+                     HelpFormatter formatter = new HelpFormatter();
+                     String header = "Parses ZTE templace excel document to csv\n\n";
+                     String footer = "\n";
+                     footer += "Examples: \n";
+                     footer += "java -jar boda-ztexlscmparser.jar -i workbook.xls -o out_folder\n";
+                     footer += "java -jar boda-ztexlscmparser.jar -i input_folder -o out_folder\n";
+                     footer += "\nCopyright (c) 2019 Bodastage Solutions(http://www.bodastage.com)";
+                     formatter.printHelp( "java -jar boda-ztexlscmparser.jar", header, options, footer );
+                     System.exit(0);
+            }
+        
+            //Confirm that the output directory is a directory and has write 
+            //privileges
+            if(outputDirectory != null ){
+                File fOutputDir = new File(outputDirectory);
+                if (!fOutputDir.isDirectory()) {
+                    System.err.println("ERROR: The specified output directory is not a directory!.");
+                    System.exit(1);
+                }
+
+                if (!fOutputDir.canWrite()) {
+                    System.err.println("ERROR: Cannot write to output directory!");
+                    System.exit(1);
                 }
             }
             
-            parser.setDataSource(args[0]);
-            parser.setFileName(args[0]);
-            parser.setOuputDirectory(args[1]);
-            parser.parse();
-            parser.printExecutionTime();
+            
+
+            //Get parser instance
+            ZTEXLSCMParser cmParser = new ZTEXLSCMParser();
+            
+            if(  parameterConfigFile != null ){
+                File f = new File(parameterConfigFile);
+                if(f.isFile()){
+                    cmParser.setParameterFile(parameterConfigFile);
+                    cmParser.getParametersToExtract(parameterConfigFile);
+                    cmParser.parserState = ParserStates.EXTRACTING_VALUES;
+                }
+            }
+            
+            cmParser.setDataSource(inputFile);
+            if(outputDirectory != null ) cmParser.setOutputDirectory(outputDirectory);
+            
+            cmParser.parse();
         }catch(Exception e){
             System.out.println(e.getMessage());
+            System.exit(1);
         }
     }
     
@@ -196,7 +310,7 @@ public class ZTEXLSCMParser {
      * @version 1.0.0
      */
     static public void showHelp(){
-        System.out.println("boda-ztexlscmparser 1.0.0 Copyright (c) 2017 Bodastage(http://www.bodastage.com)");
+        System.out.println("boda-ztexlscmparser " + VERSION + " Copyright (c) 2019 Bodastage(http://www.bodastage.com)");
         System.out.println("Parses ZTE CM Dumps from Netnumen in excel to csv.");
         System.out.println("Usage: java -jar boda-ztexlscmparser.jar <fileToParse.xls> <outputDirectory> [parameterFile]");
     }
@@ -284,6 +398,7 @@ public class ZTEXLSCMParser {
             parserState = ParserStates.EXTRACTING_VALUES;
         }
 
+        
         //Extracting values
         if (parserState == ParserStates.EXTRACTING_VALUES) {
             processFileOrDirectory();
@@ -334,7 +449,6 @@ public class ZTEXLSCMParser {
             runningTime = runningTime - (msecs/1000);
         }
 
-        
         System.out.println(s);
     }
     
@@ -443,7 +557,7 @@ public class ZTEXLSCMParser {
     public void parseFile(String fileName ) throws FileNotFoundException, IOException, InvalidFormatException{
         Workbook wb = WorkbookFactory.create(new File(fileName));
         
-        //CGet
+        //Handle sheet 0 i.e. first sheet
         Sheet templateInfoSheet = wb.getSheetAt(0);
         for (Row row : templateInfoSheet) {
             String key = row.getCell(0).getStringCellValue();
@@ -466,24 +580,26 @@ public class ZTEXLSCMParser {
             }
         }
         
+        //Get the MOs from the 2nd sheet which has the MO list
         Sheet sheet = wb.getSheetAt(1);
          
         int rowCount = 0;
         for (Row row : sheet) {
             rowCount++ ;
             
-            //Skip first row of headers 
+            //Skip first row of headers on sheet 2
             if(rowCount == 1 ) continue;
             
+            //Get MO name from 2nd column of sheet i.e. index 1
             Cell cell = row.getCell(1);
-            String moName = cell.getStringCellValue();
+            String moName = cell.getStringCellValue(); 
             
             //Skip MOs not in parameter file
             if(parameterFile != null && !moColumns.containsKey(moName)) continue;
             
-
+            //Get MO Sheet
             Sheet moSheet = wb.getSheet(moName);
-
+            
             Stack<String> parameters = new Stack();
             Stack<String> keyParameters = new Stack();
 
@@ -530,19 +646,21 @@ public class ZTEXLSCMParser {
             }
             
             
-            //Parameters in the sheet
+            //Extract the parameters in the MO sheet
             Stack<String> sheetParams = new Stack();  
             Stack<String> sheetKeyParams = new Stack();           
             
             int sheetRowCount = 0;
             for (Row sheetRow : moSheet) {
                 ++sheetRowCount;
-                
-                //Do nothing if we are on rows
+
+                //Do nothing if we are on rows 2 to 4
                 if(sheetRowCount >= 2 && sheetRowCount <= 4 ){
                     continue;
                 }
                 
+                // Skip row 5 if we are not extracting parameters. This row as the 
+                //parameter names 
                 if(sheetRowCount == 5 && parserState != ParserStates.EXTRACTING_PARAMETERS){
                     continue;
                 }
@@ -550,12 +668,12 @@ public class ZTEXLSCMParser {
                 //Get values from each row
                 Stack<String> sheetParamValues = new Stack(); 
                 
-                int rCount = 0; //cell horizontal count per row
-                for(Cell sheetRowCell: sheetRow){
-                    ++rCount;
+                //Iterate over the row cells
+                for(int rCount=0; rCount < row.getLastCellNum(); rCount++) {
+                    Cell sheetRowCell = row.getCell(rCount, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
                     
                     String cellValue = sheetRowCell.getStringCellValue();
-                    
+
                     //Exrtract parameters
                     if( sheetRowCount == 1 && parserState == ParserStates.EXTRACTING_PARAMETERS){
                         if(!parameters.contains(cellValue)){ 
@@ -588,18 +706,15 @@ public class ZTEXLSCMParser {
                         continue;
                     }
                     
+                                        
                     //Else for rows > 5
                     if(sheetRowCount>5 && parserState == ParserStates.EXTRACTING_VALUES ){
                         //pValueStr += "," + toCSVFormat(cellValue);
                         sheetParamValues.add(cellValue);
 
-                    }
-                    
-
-                    
+                    }   
                 }
 
-                
                 //Write values
                 if(sheetRowCount>5 && parserState == ParserStates.EXTRACTING_VALUES){
 
@@ -608,7 +723,6 @@ public class ZTEXLSCMParser {
                         "," + templateType + "," + templateVersion + 
                         "," + dataType ;
                     Stack pList = moColumns.get(moName);
-
                     for(int i =0; i < pList.size(); i++){
                             
                         String p = pList.get(i).toString();
