@@ -50,7 +50,7 @@ public class ZTEXLSCMParser {
      * 
      * Since 1.3.0
      */
-    final static String VERSION = "1.2.0";
+    final static String VERSION = "1.2.1";
     
     private static final Logger LOGGER = LoggerFactory.getLogger(ZTEXLSCMParser.class);
     
@@ -669,8 +669,8 @@ public class ZTEXLSCMParser {
                 Stack<String> sheetParamValues = new Stack(); 
                 
                 //Iterate over the row cells
-                for(int rCount=0; rCount < row.getLastCellNum(); rCount++) {
-                    Cell sheetRowCell = row.getCell(rCount, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
+                for(int rCount=0; rCount < sheetRow.getLastCellNum(); rCount++) {
+                    Cell sheetRowCell = sheetRow.getCell(rCount, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
                     
                     String cellValue = sheetRowCell.getStringCellValue();
 
@@ -685,14 +685,14 @@ public class ZTEXLSCMParser {
                     
                     //Get key parameters
                     if( sheetRowCount == 5 && parserState == ParserStates.EXTRACTING_PARAMETERS ){
-                        if(cellValue.equals("Primary Key")){
-                            //sheetKeyParams.add( sheetParams.get(rCount-1));
-                            String kParam = parameters.get(rCount-1);
-                            if(!keyParameters.contains(kParam)){
-                                keyParameters.add(kParam);
-                            }
-                        }
-                        
+//                        if(cellValue.equals("Primary Key")){
+//                            //sheetKeyParams.add( sheetParams.get(rCount-1));
+//                            String kParam = parameters.get(rCount-1);
+//                            if(!keyParameters.contains(kParam)){
+//                                keyParameters.add(kParam);
+//                            }
+//                        }
+//                        
                         continue;
                     }
             
