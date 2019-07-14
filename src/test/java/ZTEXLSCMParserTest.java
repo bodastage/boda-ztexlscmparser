@@ -3,8 +3,9 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.bodastage.boda_ztexmlcmparser;
 
+
+import com.bodastage.boda_ztexmlcmparser.ZTEXLSCMParser;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -23,10 +24,10 @@ import junit.framework.TestSuite;
  */
 public class ZTEXLSCMParserTest extends TestCase {
     
-    void testGeneralParsing(){
+    public void testGeneralParsing(){
     
         ClassLoader classLoader = getClass().getClassLoader();
-        File inFile = new File(classLoader.getResource("tempaltedata.xlsx").getFile());
+        File inFile = new File(classLoader.getResource("templatedata.xlsx").getFile());
         String inputFile = inFile.getAbsolutePath();
         
         String outputFolder = System.getProperty("java.io.tmpdir");
@@ -39,23 +40,27 @@ public class ZTEXLSCMParserTest extends TestCase {
         
         String expectedResult [] = {
             "FileName,varDateTime,NeType,TemplateType,TemplateVersion,DataType,SomeMO1Param1,SomeMO1Param2,SomeMO1Param3",
-            "templatedata.xlsx,2019-07-14 09:05:16,Multi-mode Controller,Plan,V0123,tech_radio,1,2,3",
-            "templatedata.xlsx,2019-07-14 09:05:16,Multi-mode Controller,Plan,V0123,tech_radio,4,5,6"
+            "templatedata.xlsx,2019-07-14 10:05:51,Multi-mode Controller,Plan,V0123,tech_radio,1,2,3",
+            "templatedata.xlsx,2019-07-14 10:05:51,Multi-mode Controller,Plan,V0123,tech_radio,4,5,6"
         };
         
         try{
-            String csvFile = outputFolder + File.separator + "vsDataSomeMO.csv";
+            String csvFile = outputFolder + File.separator + "SomeMO1.csv";
             
             BufferedReader br = new BufferedReader(new FileReader(csvFile)); 
-            String csvResult [] = new String[2];
+            String csvResult [] = new String[3];
             
             int i = 0;
             String st; 
             while ((st = br.readLine()) != null) {
                 csvResult[i] = st;
                 i++;
+                Logger.getLogger(ZTEXLSCMParser.class.getName()).log(Level.INFO, st);
             }
             
+            
+            //Logger.getLogger(ZTEXLSCMParser.class.getName()).log(Level.INFO, csvResult.toString());
+            //Logger.getLogger(ZTEXLSCMParser.class.getName()).log(Level.INFO, expectedResult.toString());
             
             assertTrue(Arrays.equals(expectedResult, csvResult));
             
