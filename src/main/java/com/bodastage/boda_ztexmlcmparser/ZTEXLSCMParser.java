@@ -51,7 +51,7 @@ public class ZTEXLSCMParser {
      * 
      * Since 1.3.0
      */
-    final static String VERSION = "1.2.1";
+    final static String VERSION = "1.2.2";
     
     private static final Logger LOGGER = LoggerFactory.getLogger(ZTEXLSCMParser.class);
     

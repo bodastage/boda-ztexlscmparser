@@ -16,6 +16,7 @@ import java.util.logging.Logger;
 import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
+import org.slf4j.LoggerFactory;
 
 /**
  *
@@ -23,10 +24,12 @@ import junit.framework.TestSuite;
  */
 public class ZTEXLSCMParserTest extends TestCase {
     
-    void testGeneralParsing(){
+    private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(ZTEXLSCMParser.class);
+    
+    public void testGeneralParsing(){
     
         ClassLoader classLoader = getClass().getClassLoader();
-        File inFile = new File(classLoader.getResource("tempaltedata.xlsx").getFile());
+        File inFile = new File(classLoader.getResource("templatedata.xlsx").getFile());
         String inputFile = inFile.getAbsolutePath();
         
         String outputFolder = System.getProperty("java.io.tmpdir");
@@ -39,23 +42,31 @@ public class ZTEXLSCMParserTest extends TestCase {
         
         String expectedResult [] = {
             "FileName,varDateTime,NeType,TemplateType,TemplateVersion,DataType,SomeMO1Param1,SomeMO1Param2,SomeMO1Param3",
-            "templatedata.xlsx,2019-07-14 09:05:16,Multi-mode Controller,Plan,V0123,tech_radio,1,2,3",
-            "templatedata.xlsx,2019-07-14 09:05:16,Multi-mode Controller,Plan,V0123,tech_radio,4,5,6"
+            "templatedata.xlsx,YYYY-MM-DD HH:MI:SS,Multi-mode Controller,Plan,V0123,tech_radio,1,2,3",
+            "templatedata.xlsx,YYYY-MM-DD HH:MI:SS,Multi-mode Controller,Plan,V0123,tech_radio,4,5,6"
         };
         
         try{
-            String csvFile = outputFolder + File.separator + "vsDataSomeMO.csv";
+            String csvFile = outputFolder + File.separator + "SomeMO1.csv";
             
             BufferedReader br = new BufferedReader(new FileReader(csvFile)); 
-            String csvResult [] = new String[2];
+            String csvResult [] = new String[3];
             
             int i = 0;
             String st; 
             while ((st = br.readLine()) != null) {
-                csvResult[i] = st;
+                //Repalce the date with YYYY-MM-DD HH:MI:SS as the parser generates 
+                //as unique  datetime whenever it runs
+                String c [] = st.split(",");
+                c[1] = "YYYY-MM-DD HH:MI:SS";
+                 
+                csvResult[i] = "";
+                for(int idx =0; idx < c.length; idx++){ 
+                    if( idx > 0) csvResult[idx] += ",";
+                    csvResult[i] += c[idx];
+                }
                 i++;
             }
-            
             
             assertTrue(Arrays.equals(expectedResult, csvResult));
             
