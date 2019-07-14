@@ -38,6 +38,7 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
+import org.apache.poi.ss.usermodel.CellType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 /**
@@ -143,7 +144,7 @@ public class ZTEXLSCMParser {
     final long startTime = System.currentTimeMillis();
     
     /**
-     * Tracks Managed Object key attributes. _id is appended to the parimary key 
+     * Tracks Managed Object key attributes. _id is appended to the primary key 
      * parameters in the headers of the csv
      *
      * @since 1.0.0
@@ -254,7 +255,7 @@ public class ZTEXLSCMParser {
                 inputFile == null || 
                 ( outputDirectory == null && onlyExtractParameters == false) ){
                      HelpFormatter formatter = new HelpFormatter();
-                     String header = "Parses ZTE templace excel document to csv\n\n";
+                     String header = "Parses ZTE template excel document to csv\n\n";
                      String footer = "\n";
                      footer += "Examples: \n";
                      footer += "java -jar boda-ztexlscmparser.jar -i workbook.xls -o out_folder\n";
@@ -312,7 +313,7 @@ public class ZTEXLSCMParser {
     static public void showHelp(){
         System.out.println("boda-ztexlscmparser " + VERSION + " Copyright (c) 2019 Bodastage(http://www.bodastage.com)");
         System.out.println("Parses ZTE CM Dumps from Netnumen in excel to csv.");
-        System.out.println("Usage: java -jar boda-ztexlscmparser.jar <fileToParse.xls> <outputDirectory> [parameterFile]");
+        System.out.println("Usage: java -jar boda-ztexlscmparser.jar -i <fileToParse.xls> -o <outputDirectory> [parameterFile]");
     }
     
     /**
@@ -560,9 +561,10 @@ public class ZTEXLSCMParser {
         //Handle sheet 0 i.e. first sheet
         Sheet templateInfoSheet = wb.getSheetAt(0);
         for (Row row : templateInfoSheet) {
-            String key = row.getCell(0).getStringCellValue();
-            String value = row.getCell(1).getStringCellValue();
+            String key = row.getCell(0, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK).getStringCellValue();
+            String value = row.getCell(1, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK).getStringCellValue();
             
+                     
             if(key.equals("NE Type:")){
                 neType = value;
             }
@@ -582,24 +584,25 @@ public class ZTEXLSCMParser {
         
         //Get the MOs from the 2nd sheet which has the MO list
         Sheet sheet = wb.getSheetAt(1);
-         
+                
         int rowCount = 0;
         for (Row row : sheet) {
             rowCount++ ;
             
             //Skip first row of headers on sheet 2
             if(rowCount == 1 ) continue;
-            
+                        
             //Get MO name from 2nd column of sheet i.e. index 1
-            Cell cell = row.getCell(1);
+            Cell cell = row.getCell(1,Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
             String moName = cell.getStringCellValue(); 
-            
+            if(moName.replace(" ", "").length()==0)continue;
+                       
             //Skip MOs not in parameter file
             if(parameterFile != null && !moColumns.containsKey(moName)) continue;
             
             //Get MO Sheet
             Sheet moSheet = wb.getSheet(moName);
-            
+                        
             Stack<String> parameters = new Stack();
             Stack<String> keyParameters = new Stack();
 
@@ -653,7 +656,7 @@ public class ZTEXLSCMParser {
             int sheetRowCount = 0;
             for (Row sheetRow : moSheet) {
                 ++sheetRowCount;
-
+                
                 //Do nothing if we are on rows 2 to 4
                 if(sheetRowCount >= 2 && sheetRowCount <= 4 ){
                     continue;
@@ -672,11 +675,14 @@ public class ZTEXLSCMParser {
                 for(int rCount=0; rCount < sheetRow.getLastCellNum(); rCount++) {
                     Cell sheetRowCell = sheetRow.getCell(rCount, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
                     
+                    sheetRowCell.setCellType(CellType.STRING);
                     String cellValue = sheetRowCell.getStringCellValue();
 
                     //Exrtract parameters
                     if( sheetRowCount == 1 && parserState == ParserStates.EXTRACTING_PARAMETERS){
-                        if(!parameters.contains(cellValue)){ 
+                        
+                        //Ignore empty cells
+                        if(!parameters.contains(cellValue) && cellValue.replace(" ", "").length() != 0){ 
                             parameters.add(cellValue);
                         }
                         continue;
@@ -740,8 +746,9 @@ public class ZTEXLSCMParser {
                         
                         int pIndex = sheetParams.indexOf(p);
 
+                        String value = "";
                         
-                        String value = sheetParamValues.get(pIndex);
+                        if(pIndex < sheetParamValues.size() ) value = sheetParamValues.get(pIndex);
                         
                         pValueStr += "," + toCSVFormat(value);
                     }
