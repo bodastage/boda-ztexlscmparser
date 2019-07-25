@@ -51,7 +51,7 @@ public class ZTEXLSCMParser {
      * 
      * Since 1.3.0
      */
-    final static String VERSION = "1.2.2";
+    final static String VERSION = "1.2.3";
     
     private static final Logger LOGGER = LoggerFactory.getLogger(ZTEXLSCMParser.class);
     
@@ -647,8 +647,7 @@ public class ZTEXLSCMParser {
                 moiPrintWriters.get(moName).println(pNameStr);
 
             }
-            
-            
+
             //Extract the parameters in the MO sheet
             Stack<String> sheetParams = new Stack();  
             Stack<String> sheetKeyParams = new Stack();           
@@ -656,7 +655,7 @@ public class ZTEXLSCMParser {
             int sheetRowCount = 0;
             for (Row sheetRow : moSheet) {
                 ++sheetRowCount;
-                
+
                 //Do nothing if we are on rows 2 to 4
                 if(sheetRowCount >= 2 && sheetRowCount <= 4 ){
                     continue;
@@ -675,8 +674,26 @@ public class ZTEXLSCMParser {
                 for(int rCount=0; rCount < sheetRow.getLastCellNum(); rCount++) {
                     Cell sheetRowCell = sheetRow.getCell(rCount, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
                     
-                    sheetRowCell.setCellType(CellType.STRING);
-                    String cellValue = sheetRowCell.getStringCellValue();
+                    //sheetRowCell.setCellType(CellType.STRING);
+                    //String cellValue = sheetRowCell.getStringCellValue();
+                    String cellValue = "";
+                    
+                    if(null == sheetRowCell.getCellTypeEnum()){
+                        cellValue = "";
+                    }else {
+                        switch (sheetRowCell.getCellTypeEnum()) {
+                            case STRING:
+                                cellValue = sheetRowCell.getStringCellValue();
+                                break;
+                            case NUMERIC:
+                                cellValue  = Double.toString(sheetRowCell.getNumericCellValue());
+                                break;
+                            default:
+                                cellValue = "";
+                                break;
+                        }
+                    }
+
 
                     //Exrtract parameters
                     if( sheetRowCount == 1 && parserState == ParserStates.EXTRACTING_PARAMETERS){
