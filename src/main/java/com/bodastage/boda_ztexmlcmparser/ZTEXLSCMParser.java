@@ -23,6 +23,8 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Stack;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.xml.stream.XMLStreamException;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
@@ -39,6 +41,7 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.DateUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 /**
@@ -51,7 +54,7 @@ public class ZTEXLSCMParser {
      * 
      * Since 1.3.0
      */
-    final static String VERSION = "1.2.3";
+    final static String VERSION = "1.2.4";
     
     private static final Logger LOGGER = LoggerFactory.getLogger(ZTEXLSCMParser.class);
     
@@ -392,6 +395,14 @@ public class ZTEXLSCMParser {
      * @throws UnsupportedEncodingException 
      */
     public void parse() throws XMLStreamException, FileNotFoundException, UnsupportedEncodingException, IOException, InvalidFormatException {
+        
+        //Get date from file name ...YYYYMMDDHHMMSS.xlsx
+        Pattern p = Pattern.compile("(\\d+)\\.\\D+$");
+        Matcher m = p.matcher(dataSource);
+        if(m.find()){
+            dateTime = m.group(1);
+        }
+        
         //Extract parameters
         if (parserState == ParserStates.EXTRACTING_PARAMETERS) {
             processFileOrDirectory();
@@ -678,6 +689,7 @@ public class ZTEXLSCMParser {
                     //String cellValue = sheetRowCell.getStringCellValue();
                     String cellValue = "";
                     
+                    
                     if(null == sheetRowCell.getCellTypeEnum()){
                         cellValue = "";
                     }else {
@@ -686,7 +698,10 @@ public class ZTEXLSCMParser {
                                 cellValue = sheetRowCell.getStringCellValue();
                                 break;
                             case NUMERIC:
-                                cellValue  = Double.toString(sheetRowCell.getNumericCellValue());
+                                    Double value = sheetRowCell.getNumericCellValue();
+                                    Long longValue = value.longValue();
+                                    cellValue = new String(longValue.toString());
+                                //cellValue  = Double.toString(sheetRowCell.getNumericCellValue());
                                 break;
                             default:
                                 cellValue = "";
