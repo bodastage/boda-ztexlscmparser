@@ -630,7 +630,7 @@ public class ZTEXLSCMParser {
                 Stack moParameterList = moColumns.get(moName);
                 Stack moKeyParameterList = moKeyColumns.get(moName);
 
-                String pNameStr = "FileName,varDateTime,NeType,TemplateType,TemplateVersion,DataType";
+                String pNameStr = "FileName,DateTime,NeType,TemplateType,TemplateVersion,DataType";
                 String pValueStr   = baseFileName + ","+ dateTime + "," + neType + 
                         "," + templateType + "," + templateVersion + 
                         "," + dataType ;
@@ -638,10 +638,10 @@ public class ZTEXLSCMParser {
                 for(int i =0; i < moParameterList.size(); i++ ){
                     String p = moParameterList.get(i).toString();
 
-                    //Skip filename and vardatetime
+                    //Skip filename and datetime
                     if(parameterFile != null && 
                         ( p.toLowerCase().equals("filename") || 
-                            p.toLowerCase().equals("vardatetime") || 
+                            p.toLowerCase().equals("datetime") || 
                             p.toLowerCase().equals("netype") || 
                             p.toLowerCase().equals("templatetype") || 
                             p.toLowerCase().equals("templateversion") || 
@@ -756,7 +756,7 @@ public class ZTEXLSCMParser {
                 //Write values
                 if(sheetRowCount>5 && parserState == ParserStates.EXTRACTING_VALUES){
 
-                    String pNameStr = "FileName,varDateTime,NeType,TemplateType,TemplateVersion,DataType";
+                    String pNameStr = "FileName,DateTime,NeType,TemplateType,TemplateVersion,DataType";
                     String pValueStr   = baseFileName + ","+ dateTime + "," + neType + 
                         "," + templateType + "," + templateVersion + 
                         "," + dataType ;
@@ -765,10 +765,10 @@ public class ZTEXLSCMParser {
                             
                         String p = pList.get(i).toString();
                         
-                        //Skip filename and vardatetime
+                        //Skip filename and datetime
                         if(parameterFile != null && 
                             ( p.toLowerCase().equals("filename") || 
-                                p.toLowerCase().equals("vardatetime") || 
+                                p.toLowerCase().equals("datetime") || 
                                 p.toLowerCase().equals("netype") || 
                                 p.toLowerCase().equals("templatetype") || 
                                 p.toLowerCase().equals("templateversion") || 
