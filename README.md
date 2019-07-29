@@ -1,6 +1,6 @@
 ![Build status](https://travis-ci.org/bodastage/boda-ztexlscmparser.svg?branch=master)
 
-# boda-bulkcmparser
+# boda-ztexlscmparser
 Parses ZTE CM Plan template Excel workbooks to csv
 
 # Usage
