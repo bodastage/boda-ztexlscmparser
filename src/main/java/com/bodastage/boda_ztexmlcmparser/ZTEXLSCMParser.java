@@ -630,7 +630,7 @@ public class ZTEXLSCMParser {
                 Stack moParameterList = moColumns.get(moName);
                 Stack moKeyParameterList = moKeyColumns.get(moName);
 
-                String pNameStr = "FileName,DateTime,NeType,TemplateType,TemplateVersion,DataType";
+                String pNameStr = "FILENAME,DATETIME,NeType,TemplateType,TemplateVersion,DataType";
                 String pValueStr   = baseFileName + ","+ dateTime + "," + neType + 
                         "," + templateType + "," + templateVersion + 
                         "," + dataType ;
@@ -756,7 +756,7 @@ public class ZTEXLSCMParser {
                 //Write values
                 if(sheetRowCount>5 && parserState == ParserStates.EXTRACTING_VALUES){
 
-                    String pNameStr = "FileName,DateTime,NeType,TemplateType,TemplateVersion,DataType";
+                    String pNameStr = "FILENAME,DATETIME,NeType,TemplateType,TemplateVersion,DataType";
                     String pValueStr   = baseFileName + ","+ dateTime + "," + neType + 
                         "," + templateType + "," + templateVersion + 
                         "," + dataType ;
